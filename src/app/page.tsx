@@ -14,31 +14,9 @@ type ClientStatus = 'On Track' | 'Attention Needed' | 'At Risk' | 'Inactive';
 type TaskStatus = 'pending' | 'completed' | 'overdue' | 'waiting_approval';
 type Priority = 'high' | 'normal' | 'low';
 
-const clientsData = [
-  { id: 1, name: 'Exportas Exim Solution', industry: 'Import-Export', status: 'On Track' as ClientStatus, nextAction: 'Send Reel #12 for approval', lastContact: 'Yesterday' },
-  { id: 2, name: 'Devam Group', industry: 'Real Estate', status: 'Attention Needed' as ClientStatus, nextAction: 'Follow up for post approval', lastContact: '2 days ago' },
-  { id: 3, name: 'Client X', industry: 'E-commerce', status: 'On Track' as ClientStatus, nextAction: 'Create October content plan', lastContact: 'Today' },
-  { id: 4, name: 'Client Y', industry: 'Retail', status: 'At Risk' as ClientStatus, nextAction: 'Resolve overdue task', lastContact: '1 week ago' },
-];
+const clientsData: any[] = [];
 
-const tasksData = [
-  { id: 1, clientId: 1, title: 'Edit Reel – GST Refund', time: '10:00 AM', priority: 'normal', status: 'pending', category: 'Content', date: 'today' },
-  { id: 2, clientId: 1, title: 'Create Reel Cover', time: '11:00 AM', priority: 'normal', status: 'pending', category: 'Design', date: 'today' },
-  { id: 3, clientId: 1, title: 'Follow up with Exportas for Reel approval', time: '12:00 PM', priority: 'high', status: 'pending', category: 'Client Management', date: 'today' },
-  { id: 4, clientId: 1, title: 'Client approval – Reel #11', time: null, priority: 'normal', status: 'waiting_approval', category: 'Approval', date: 'today' },
-  { id: 5, clientId: 1, title: 'Approval for Reel #10', time: 'Yesterday', priority: 'high', status: 'overdue', category: 'Approval', date: 'past' },
-  
-  { id: 6, clientId: 2, title: 'Send Devam Group post designs', time: '11:00 AM', priority: 'high', status: 'pending', category: 'Design', date: 'today' },
-  { id: 7, clientId: 2, title: 'Create Devam Story', time: '2:00 PM', priority: 'normal', status: 'pending', category: 'Content', date: 'today' },
-  { id: 8, clientId: 2, title: 'Story approval', time: '28 Sep', priority: 'normal', status: 'waiting_approval', category: 'Approval', date: 'past' },
-  { id: 9, clientId: 2, title: 'Post approval', time: '29 Sep', priority: 'normal', status: 'waiting_approval', category: 'Approval', date: 'past' },
-  
-  { id: 10, clientId: 3, title: 'Prepare client report', time: '4:00 PM', priority: 'normal', status: 'pending', category: 'Admin', date: 'today' },
-  { id: 11, clientId: 3, title: 'Product images', time: '27 Sep', priority: 'normal', status: 'waiting_approval', category: 'Client Management', date: 'past' },
-  
-  { id: 12, clientId: 4, title: 'Resolve overdue task', time: '2 Days Ago', priority: 'high', status: 'overdue', category: 'Admin', date: 'past' },
-  { id: 13, clientId: 4, title: 'Payment follow-up', time: '10:00 AM', priority: 'high', status: 'pending', category: 'Admin', date: 'today' },
-];
+const tasksData: any[] = [];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('clients');
