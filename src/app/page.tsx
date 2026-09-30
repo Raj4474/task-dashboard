@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getClients, getTasks, addClient, addTask, toggleTaskStatus, resetDatabase } from "./actions";
 import { 
   CheckCircle2, Circle, Clock, LayoutDashboard, Inbox, 
   Calendar, FolderKanban, Users, Plus, Settings, 
@@ -20,8 +21,18 @@ const tasksData: any[] = [];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('clients');
-  const [tasks, setTasks] = useState(tasksData);
-  const [clients, setClients] = useState(clientsData);
+  const [tasks, setTasks] = useState<any[]>(tasksData);
+  const [clients, setClients] = useState<any[]>(clientsData);
+
+  useEffect(() => {
+    async function loadData() {
+      const clientsData = await getClients();
+      const tasksData = await getTasks();
+      setClients(clientsData);
+      setTasks(tasksData);
+    }
+    loadData();
+  }, []);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -30,25 +41,39 @@ export default function App() {
   const [userRole, setUserRole] = useState('Workspace Owner');
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  const handleResetData = () => {
+  const handleResetData = async () => {
     if (window.confirm("Are you sure you want to delete all clients and tasks? This cannot be undone.")) {
+      await resetDatabase();
       setTasks([]);
       setClients([]);
       setSelectedClientId(null);
     }
   };
 
-  const toggleTask = (taskId: number) => {
+  const toggleTask = async (taskId: number) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    // Optimistic update
     setTasks(tasks.map(t => t.id === taskId ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t));
+    
+    // Server update
+    await toggleTaskStatus(taskId, task.status);
   };
 
-  const handleAddTask = (newTask: any) => {
-    setTasks([...tasks, { ...newTask, id: Date.now(), status: 'pending' }]);
+  const handleAddTask = async (newTask: any) => {
+    const createdTask = await addTask(newTask);
+    setTasks([...tasks, createdTask]);
     setIsAddTaskOpen(false);
   };
 
-  const handleAddClient = (newClient: any) => {
-    setClients([...clients, { ...newClient, id: Date.now(), lastContact: 'Never', nextAction: 'Setup new client' }]);
+  const handleAddClient = async (newClient: any) => {
+    const createdClient = await addClient({
+      ...newClient,
+      lastContact: 'Never',
+      nextAction: 'Setup new client'
+    });
+    setClients([...clients, createdClient]);
     setIsAddClientOpen(false);
   };
 
