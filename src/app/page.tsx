@@ -140,7 +140,7 @@ export default function App() {
   }
 
   return (
-    <div className={`flex flex-col md:flex-row h-screen overflow-hidden bg-slate-900 text-slate-100 selection:bg-blue-500/30 transition-all duration-500 ${!isDarkMode ? 'invert hue-rotate-180' : ''}`}>
+    <div className={`flex h-screen overflow-hidden bg-slate-900 text-slate-100 selection:bg-blue-500/30 transition-all duration-500 ${!isDarkMode ? 'invert hue-rotate-180' : ''}`}>
       
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-white/10 z-10 p-4">
@@ -163,7 +163,7 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-y-auto relative">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto pb-20 md:pb-0 relative">
         {activeTab === 'clients' && !selectedClientId && <ClientsView clients={clients} tasks={tasks} onAddClientClick={() => setIsAddClientOpen(true)} onClientClick={setSelectedClientId} userName={userName} />}
         {activeTab === 'clients' && selectedClientId && <ClientDetailView client={clients.find(c => c.id === selectedClientId)} tasks={tasks.filter(t => t.clientId === selectedClientId)} toggleTask={toggleTask} onBack={() => setSelectedClientId(null)} />}
         {activeTab === 'tasks' && <TasksView clients={clients} tasks={tasks} toggleTask={toggleTask} />}
@@ -171,7 +171,7 @@ export default function App() {
         {activeTab === 'settings' && <SettingsView userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onReset={handleResetData} appPassword={appPassword} setAppPassword={setAppPassword} />}
         
         {/* FAB */}
-        <div className="absolute bottom-6 right-6 z-20">
+        <div className="fixed md:absolute bottom-20 md:bottom-10 right-6 z-20">
           <button onClick={() => setIsAddTaskOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full px-4 md:px-6 py-4 shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95 group">
             <Plus size={24} className="group-hover:rotate-90 transition-transform" />
             <span className="hidden md:inline font-medium">New Action</span>
@@ -180,7 +180,7 @@ export default function App() {
       </main>
 
       {/* Mobile Nav */}
-      <nav className="md:hidden glass-panel border-t border-white/10 flex justify-around items-center min-h-[4rem] z-30 pb-safe w-full sticky bottom-0 mt-auto">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 flex justify-around items-center h-16 z-30 pb-safe">
         <MobileNavItem icon={<Users size={24} />} label="Clients" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
         <MobileNavItem icon={<Inbox size={24} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
         <MobileNavItem icon={<MessageSquare size={24} />} label="Follow-Ups" active={activeTab === 'followup'} onClick={() => setActiveTab('followup')} />
