@@ -40,14 +40,24 @@ export default function App() {
   const [userName, setUserName] = useState('Admin');
   const [userRole, setUserRole] = useState('Workspace Owner');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [appPassword, setAppPassword] = useState('1234');
+  const [loginInput, setLoginInput] = useState('');
 
   useEffect(() => {
     const storedName = localStorage.getItem('userName');
     const storedRole = localStorage.getItem('userRole');
     const storedDark = localStorage.getItem('isDarkMode');
+    const storedPassword = localStorage.getItem('appPassword');
+    
     if (storedName) setUserName(storedName);
     if (storedRole) setUserRole(storedRole);
     if (storedDark) setIsDarkMode(storedDark === 'true');
+    if (storedPassword) {
+      setAppPassword(storedPassword);
+    } else {
+      localStorage.setItem('appPassword', '1234');
+    }
   }, []);
 
   const handleResetData = async () => {
@@ -90,8 +100,42 @@ export default function App() {
     setIsAddClientOpen(false);
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className={`flex items-center justify-center h-screen bg-slate-900 text-slate-100 ${!isDarkMode ? 'invert hue-rotate-180' : ''}`}>
+        <div className="glass-panel p-8 rounded-2xl border border-white/10 w-full max-w-sm text-center animate-in fade-in zoom-in-95 duration-500 mx-4">
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/50">
+              <Settings size={32} className="text-white" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Welcome Back</h2>
+          <p className="text-slate-400 text-sm mb-6">Enter your password to access.</p>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (loginInput === appPassword) setIsAuthenticated(true);
+            else alert('Incorrect password');
+          }}>
+            <input 
+              type="password" 
+              value={loginInput} 
+              onChange={e => setLoginInput(e.target.value)} 
+              className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-3 text-white mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-widest" 
+              placeholder="••••••••"
+              autoFocus
+            />
+            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-colors shadow-lg shadow-blue-900/20">
+              Login
+            </button>
+          </form>
+          <p className="text-xs text-slate-500 mt-4">Default password is 1234</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex h-screen overflow-hidden bg-slate-900 text-slate-100 selection:bg-blue-500/30 transition-all duration-500 ${!isDarkMode ? 'invert hue-rotate-180' : ''}`}>
+    <div className={`flex flex-col md:flex-row h-screen overflow-hidden bg-slate-900 text-slate-100 selection:bg-blue-500/30 transition-all duration-500 ${!isDarkMode ? 'invert hue-rotate-180' : ''}`}>
       
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-white/10 z-10 p-4">
@@ -114,15 +158,15 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-y-auto pb-20 md:pb-0 relative">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto relative">
         {activeTab === 'clients' && !selectedClientId && <ClientsView clients={clients} tasks={tasks} onAddClientClick={() => setIsAddClientOpen(true)} onClientClick={setSelectedClientId} userName={userName} />}
         {activeTab === 'clients' && selectedClientId && <ClientDetailView client={clients.find(c => c.id === selectedClientId)} tasks={tasks.filter(t => t.clientId === selectedClientId)} toggleTask={toggleTask} onBack={() => setSelectedClientId(null)} />}
         {activeTab === 'tasks' && <TasksView clients={clients} tasks={tasks} toggleTask={toggleTask} />}
         {activeTab === 'followup' && <FollowupView clients={clients} tasks={tasks} toggleTask={toggleTask} />}
-        {activeTab === 'settings' && <SettingsView userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onReset={handleResetData} />}
+        {activeTab === 'settings' && <SettingsView userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onReset={handleResetData} appPassword={appPassword} setAppPassword={setAppPassword} />}
         
         {/* FAB */}
-        <div className="fixed md:absolute bottom-20 md:bottom-10 right-6 z-20">
+        <div className="absolute bottom-6 right-6 z-20">
           <button onClick={() => setIsAddTaskOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full px-4 md:px-6 py-4 shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95 group">
             <Plus size={24} className="group-hover:rotate-90 transition-transform" />
             <span className="hidden md:inline font-medium">New Action</span>
@@ -131,7 +175,7 @@ export default function App() {
       </main>
 
       {/* Mobile Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 flex justify-around items-center h-16 z-30 pb-safe">
+      <nav className="md:hidden glass-panel border-t border-white/10 flex justify-around items-center min-h-[4rem] z-30 pb-safe w-full sticky bottom-0 mt-auto">
         <MobileNavItem icon={<Users size={24} />} label="Clients" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
         <MobileNavItem icon={<Inbox size={24} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
         <MobileNavItem icon={<MessageSquare size={24} />} label="Follow-Ups" active={activeTab === 'followup'} onClick={() => setActiveTab('followup')} />
@@ -833,7 +877,17 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
   );
 }
 
-function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode, setIsDarkMode, onReset }: any) {
+function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode, setIsDarkMode, onReset, appPassword, setAppPassword }: any) {
+  const [newPassword, setNewPassword] = useState(appPassword);
+
+  const handleUpdatePassword = () => {
+    if (newPassword) {
+      setAppPassword(newPassword);
+      localStorage.setItem('appPassword', newPassword);
+      alert('Password updated successfully');
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto w-full p-6 lg:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="space-y-2 mb-8 border-b border-white/10 pb-6">
@@ -869,6 +923,17 @@ function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode
             <button onClick={() => { setIsDarkMode(!isDarkMode); localStorage.setItem('isDarkMode', String(!isDarkMode)); }} className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${isDarkMode ? 'bg-blue-600' : 'bg-slate-600'}`}>
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isDarkMode ? 'right-1' : 'left-1'}`}></div>
             </button>
+          </div>
+        </section>
+
+        <section className="glass-panel rounded-2xl p-6 border border-white/10">
+          <h3 className="text-lg font-bold text-white mb-4">Security</h3>
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">App Password</label>
+            <div className="flex gap-2 w-full md:w-96">
+              <input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              <button onClick={handleUpdatePassword} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">Update</button>
+            </div>
           </div>
         </section>
 
