@@ -85,9 +85,14 @@ export default function App() {
       alert("Please create a client first!");
       return;
     }
-    const createdTask = await addTask(newTask);
-    setTasks([...tasks, createdTask]);
-    setIsAddTaskOpen(false);
+    try {
+      const createdTask = await addTask(newTask);
+      setTasks([...tasks, createdTask]);
+      setIsAddTaskOpen(false);
+    } catch (error: any) {
+      console.error(error);
+      alert("Error adding task: " + (error.message || String(error)));
+    }
   };
 
   const handleAddClient = async (newClient: any) => {
