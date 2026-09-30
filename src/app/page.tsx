@@ -135,6 +135,7 @@ export default function App() {
         <MobileNavItem icon={<Users size={24} />} label="Clients" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
         <MobileNavItem icon={<Inbox size={24} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
         <MobileNavItem icon={<MessageSquare size={24} />} label="Follow-Ups" active={activeTab === 'followup'} onClick={() => setActiveTab('followup')} />
+        <MobileNavItem icon={<Settings size={24} />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
       </nav>
 
       {/* MODALS */}
