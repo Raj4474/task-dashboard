@@ -492,7 +492,8 @@ function AddTaskModal({ clients, onClose, onAdd }: any) {
       priority,
       category,
       date,
-      time: time || null
+      time: time || null,
+      status: 'pending'
     });
   };
 
