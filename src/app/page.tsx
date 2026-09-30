@@ -134,9 +134,6 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 flex justify-around items-center h-16 z-30 pb-safe">
         <MobileNavItem icon={<Users size={24} />} label="Clients" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
         <MobileNavItem icon={<Inbox size={24} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
-        <button onClick={() => setIsAddTaskOpen(true)} className="w-12 h-12 -mt-6 bg-blue-600 rounded-full border-4 border-slate-900 flex items-center justify-center text-white shadow-lg shadow-blue-900/50 hover:bg-blue-500 transition-colors active:scale-95">
-           <Plus size={20} />
-        </button>
         <MobileNavItem icon={<MessageSquare size={24} />} label="Follow-Ups" active={activeTab === 'followup'} onClick={() => setActiveTab('followup')} />
       </nav>
 
