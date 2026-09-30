@@ -41,6 +41,15 @@ export default function App() {
   const [userRole, setUserRole] = useState('Workspace Owner');
   const [isDarkMode, setIsDarkMode] = useState(true);
 
+  useEffect(() => {
+    const storedName = localStorage.getItem('userName');
+    const storedRole = localStorage.getItem('userRole');
+    const storedDark = localStorage.getItem('isDarkMode');
+    if (storedName) setUserName(storedName);
+    if (storedRole) setUserRole(storedRole);
+    if (storedDark) setIsDarkMode(storedDark === 'true');
+  }, []);
+
   const handleResetData = async () => {
     if (window.confirm("Are you sure you want to delete all clients and tasks? This cannot be undone.")) {
       await resetDatabase();
@@ -62,6 +71,10 @@ export default function App() {
   };
 
   const handleAddTask = async (newTask: any) => {
+    if (!newTask.clientId || isNaN(newTask.clientId)) {
+      alert("Please create a client first!");
+      return;
+    }
     const createdTask = await addTask(newTask);
     setTasks([...tasks, createdTask]);
     setIsAddTaskOpen(false);
@@ -839,11 +852,11 @@ function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">Name</label>
-              <input type="text" value={userName} onChange={e => setUserName(e.target.value)} className="w-full md:w-96 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              <input type="text" value={userName} onChange={e => { setUserName(e.target.value); localStorage.setItem('userName', e.target.value); }} className="w-full md:w-96 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">Role</label>
-              <input type="text" value={userRole} onChange={e => setUserRole(e.target.value)} className="w-full md:w-96 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              <input type="text" value={userRole} onChange={e => { setUserRole(e.target.value); localStorage.setItem('userRole', e.target.value); }} className="w-full md:w-96 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
             </div>
           </div>
         </section>
@@ -855,7 +868,7 @@ function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode
               <p className="font-medium text-white">Dark Mode</p>
               <p className="text-xs text-slate-400">Toggle dark mode theme</p>
             </div>
-            <button onClick={() => setIsDarkMode(!isDarkMode)} className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${isDarkMode ? 'bg-blue-600' : 'bg-slate-600'}`}>
+            <button onClick={() => { setIsDarkMode(!isDarkMode); localStorage.setItem('isDarkMode', String(!isDarkMode)); }} className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${isDarkMode ? 'bg-blue-600' : 'bg-slate-600'}`}>
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isDarkMode ? 'right-1' : 'left-1'}`}></div>
             </button>
           </div>
