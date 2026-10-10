@@ -56,8 +56,27 @@ export async function toggleTaskStatus(taskId: number, currentStatus: string) {
 }
 
 export async function deleteClient(id: number) {
+  await prisma.task.deleteMany({ where: { clientId: id }});
   await prisma.client.delete({ where: { id } });
   revalidatePath('/');
+}
+
+export async function updateClient(id: number, data: any) {
+  const client = await prisma.client.update({
+    where: { id },
+    data
+  });
+  revalidatePath('/');
+  return client;
+}
+
+export async function updateTask(id: number, data: any) {
+  const task = await prisma.task.update({
+    where: { id },
+    data
+  });
+  revalidatePath('/');
+  return task;
 }
 
 export async function resetDatabase() {

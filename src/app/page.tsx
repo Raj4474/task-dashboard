@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getClients, getTasks, addClient, addTask, toggleTaskStatus, resetDatabase } from "./actions";
+import { getClients, getTasks, addClient, addTask, toggleTaskStatus, resetDatabase, deleteClient, updateClient, updateTask } from "./actions";
 import { 
   CheckCircle2, Circle, Clock, LayoutDashboard, Inbox, 
   Calendar, FolderKanban, Users, Plus, Settings, 
   MoreHorizontal, AlertCircle, Search, Filter, Activity,
-  MessageSquare, ChevronRight, Play, AlertTriangle, X, ArrowLeft
+  MessageSquare, ChevronRight, Play, AlertTriangle, X, ArrowLeft, Edit2, Trash2
 } from 'lucide-react';
 
 // --- MOCK DATA ---
 
-type ClientStatus = 'On Track' | 'Attention Needed' | 'At Risk' | 'Inactive';
 type TaskStatus = 'pending' | 'completed' | 'overdue' | 'waiting_approval';
 type Priority = 'high' | 'normal' | 'low';
 
@@ -40,24 +39,15 @@ export default function App() {
   const [userName, setUserName] = useState('Admin');
   const [userRole, setUserRole] = useState('Workspace Owner');
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [appPassword, setAppPassword] = useState('1234');
-  const [loginInput, setLoginInput] = useState('');
 
   useEffect(() => {
     const storedName = localStorage.getItem('userName');
     const storedRole = localStorage.getItem('userRole');
     const storedDark = localStorage.getItem('isDarkMode');
-    const storedPassword = localStorage.getItem('appPassword');
     
     if (storedName) setUserName(storedName);
     if (storedRole) setUserRole(storedRole);
     if (storedDark) setIsDarkMode(storedDark === 'true');
-    if (storedPassword) {
-      setAppPassword(storedPassword);
-    } else {
-      localStorage.setItem('appPassword', '1234');
-    }
   }, []);
 
   const handleResetData = async () => {
@@ -85,6 +75,10 @@ export default function App() {
       alert("Please create a client first!");
       return;
     }
+    if (tasks.some(t => t.title.toLowerCase() === newTask.title.toLowerCase())) {
+      alert("A task with this title already exists.");
+      return;
+    }
     try {
       const createdTask = await addTask(newTask);
       setTasks([...tasks, createdTask]);
@@ -96,6 +90,10 @@ export default function App() {
   };
 
   const handleAddClient = async (newClient: any) => {
+    if (clients.some(c => c.name.toLowerCase() === newClient.name.toLowerCase())) {
+      alert("A client with this name already exists.");
+      return;
+    }
     const createdClient = await addClient({
       ...newClient,
       lastContact: 'Never',
@@ -105,39 +103,36 @@ export default function App() {
     setIsAddClientOpen(false);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className={`flex items-center justify-center h-screen bg-slate-900 text-slate-100 ${!isDarkMode ? 'invert hue-rotate-180' : ''}`}>
-        <div className="glass-panel p-8 rounded-2xl border border-white/10 w-full max-w-sm text-center animate-in fade-in zoom-in-95 duration-500 mx-4">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/50">
-              <Settings size={32} className="text-white" />
-            </div>
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Welcome Back</h2>
-          <p className="text-slate-400 text-sm mb-6">Enter your password to access.</p>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (loginInput === appPassword) setIsAuthenticated(true);
-            else alert('Incorrect password');
-          }}>
-            <input 
-              type="password" 
-              value={loginInput} 
-              onChange={e => setLoginInput(e.target.value)} 
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-3 text-white mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-widest" 
-              placeholder="••••••••"
-              autoFocus
-            />
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-colors shadow-lg shadow-blue-900/20">
-              Login
-            </button>
-          </form>
-          <p className="text-xs text-slate-500 mt-4">Default password is 1234</p>
-        </div>
-      </div>
-    );
-  }
+  const handleUpdateClient = async (id: number, updatedData: any) => {
+    if (updatedData.name && clients.some(c => c.id !== id && c.name.toLowerCase() === updatedData.name.toLowerCase())) {
+      alert("A client with this name already exists.");
+      return;
+    }
+    try {
+      await updateClient(id, updatedData);
+      setClients(clients.map(c => c.id === id ? { ...c, ...updatedData } : c));
+    } catch(e) { alert("Error updating client"); }
+  };
+
+  const handleUpdateTask = async (id: number, updatedData: any) => {
+    if (updatedData.title && tasks.some(t => t.id !== id && t.title.toLowerCase() === updatedData.title.toLowerCase())) {
+      alert("A task with this title already exists.");
+      return;
+    }
+    try {
+      await updateTask(id, updatedData);
+      setTasks(tasks.map(t => t.id === id ? { ...t, ...updatedData } : t));
+    } catch(e) { alert("Error updating task"); }
+  };
+  
+  const handleDeleteClient = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this client? All their tasks will be deleted too.")) {
+      await deleteClient(id);
+      setClients(clients.filter(c => c.id !== id));
+      setTasks(tasks.filter(t => t.clientId !== id));
+      if (selectedClientId === id) setSelectedClientId(null);
+    }
+  };
 
   return (
     <div className={`flex h-screen overflow-hidden bg-slate-900 text-slate-100 selection:bg-blue-500/30 transition-all duration-500 ${!isDarkMode ? 'invert hue-rotate-180' : ''}`}>
@@ -154,7 +149,6 @@ export default function App() {
         <nav className="flex-1 space-y-1">
           <NavItem icon={<Users size={20} />} label="Clients" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
           <NavItem icon={<Inbox size={20} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
-          <NavItem icon={<MessageSquare size={20} />} label="Follow-Ups" active={activeTab === 'followup'} onClick={() => setActiveTab('followup')} />
         </nav>
         
         <div className="mt-auto border-t border-white/10 pt-4">
@@ -164,14 +158,13 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-y-auto pb-20 md:pb-0 relative">
-        {activeTab === 'clients' && !selectedClientId && <ClientsView clients={clients} tasks={tasks} onAddClientClick={() => setIsAddClientOpen(true)} onClientClick={setSelectedClientId} userName={userName} />}
-        {activeTab === 'clients' && selectedClientId && <ClientDetailView client={clients.find(c => c.id === selectedClientId)} tasks={tasks.filter(t => t.clientId === selectedClientId)} toggleTask={toggleTask} onBack={() => setSelectedClientId(null)} />}
-        {activeTab === 'tasks' && <TasksView clients={clients} tasks={tasks} toggleTask={toggleTask} />}
-        {activeTab === 'followup' && <FollowupView clients={clients} tasks={tasks} toggleTask={toggleTask} />}
-        {activeTab === 'settings' && <SettingsView userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onReset={handleResetData} appPassword={appPassword} setAppPassword={setAppPassword} />}
+        {activeTab === 'clients' && !selectedClientId && <ClientsView clients={clients} tasks={tasks} onAddClientClick={() => setIsAddClientOpen(true)} onClientClick={setSelectedClientId} userName={userName} onDeleteClient={handleDeleteClient} />}
+        {activeTab === 'clients' && selectedClientId && <ClientDetailView client={clients.find(c => c.id === selectedClientId)} tasks={tasks.filter(t => t.clientId === selectedClientId)} toggleTask={toggleTask} onBack={() => setSelectedClientId(null)} onUpdateClient={(d: any) => handleUpdateClient(selectedClientId, d)} onDeleteClient={() => handleDeleteClient(selectedClientId)} onUpdateTask={handleUpdateTask} />}
+        {activeTab === 'tasks' && <TasksView clients={clients} tasks={tasks} toggleTask={toggleTask} onUpdateTask={handleUpdateTask} />}
+        {activeTab === 'settings' && <SettingsView userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onReset={handleResetData} />}
         
         {/* FAB */}
-        <div className="fixed md:absolute bottom-20 md:bottom-10 right-6 z-20">
+        <div className="fixed bottom-20 md:bottom-10 right-6 z-20">
           <button onClick={() => setIsAddTaskOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full px-4 md:px-6 py-4 shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95 group">
             <Plus size={24} className="group-hover:rotate-90 transition-transform" />
             <span className="hidden md:inline font-medium">New Action</span>
@@ -183,7 +176,6 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 flex justify-around items-center h-16 z-30 pb-safe">
         <MobileNavItem icon={<Users size={24} />} label="Clients" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
         <MobileNavItem icon={<Inbox size={24} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
-        <MobileNavItem icon={<MessageSquare size={24} />} label="Follow-Ups" active={activeTab === 'followup'} onClick={() => setActiveTab('followup')} />
         <MobileNavItem icon={<Settings size={24} />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
       </nav>
 
@@ -196,12 +188,9 @@ export default function App() {
 
 // --- VIEWS ---
 
-function DashboardView({ clients, tasks, toggleTask, userName }: any) {
+function DashboardView({ clients, tasks, toggleTask, userName, onUpdateTask }: any) {
   const activeClientsCount = clients.length;
-  const onTrackCount = clients.filter((c: any) => c.status === 'On Track').length;
-  const attentionCount = clients.filter((c: any) => c.status === 'Attention Needed').length;
-  const riskCount = clients.filter((c: any) => c.status === 'At Risk').length;
-
+  
   const todayTasks = tasks.filter((t: any) => t.date === 'today' && t.status !== 'completed' && t.status !== 'waiting_approval');
   const highPriority = todayTasks.filter((t: any) => t.priority === 'high');
   const normalPriority = todayTasks.filter((t: any) => t.priority === 'normal');
@@ -248,7 +237,7 @@ function DashboardView({ clients, tasks, toggleTask, userName }: any) {
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div> High Priority
               </h4>
               <div className="space-y-2">
-                {highPriority.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />)}
+                {highPriority.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
               </div>
             </div>
           )}
@@ -259,7 +248,7 @@ function DashboardView({ clients, tasks, toggleTask, userName }: any) {
                 <div className="w-2 h-2 rounded-full bg-yellow-500"></div> Normal
               </h4>
               <div className="space-y-2">
-                {normalPriority.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />)}
+                {normalPriority.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
               </div>
             </div>
           )}
@@ -270,7 +259,7 @@ function DashboardView({ clients, tasks, toggleTask, userName }: any) {
   );
 }
 
-function ClientsView({ clients, tasks, onAddClientClick, onClientClick, userName }: any) {
+function ClientsView({ clients, tasks, onAddClientClick, onClientClick, userName, onDeleteClient }: any) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 
@@ -309,7 +298,7 @@ function ClientsView({ clients, tasks, onAddClientClick, onClientClick, userName
   );
 }
 
-function WaitingView({ clients, tasks, toggleTask }: any) {
+function WaitingView({ clients, tasks, toggleTask, onUpdateTask }: any) {
   const waitingTasks = tasks.filter((t: any) => t.status === 'waiting_approval');
   
   // Group by client
@@ -342,7 +331,7 @@ function WaitingView({ clients, tasks, toggleTask }: any) {
                 </h3>
                 <div className="space-y-3">
                   {cTasks.map((t: any) => (
-                    <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} />
+                    <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />
                   ))}
                 </div>
               </div>
@@ -359,12 +348,11 @@ function WaitingView({ clients, tasks, toggleTask }: any) {
 function AddClientModal({ onClose, onAdd }: any) {
   const [name, setName] = useState('');
   const [industry, setIndustry] = useState('');
-  const [status, setStatus] = useState('On Track');
-
+  
   const handleSubmit = (e: any) => {
     e.preventDefault();
     if (!name) return;
-    onAdd({ name, industry, status });
+    onAdd({ name, industry });
   };
 
   return (
@@ -385,16 +373,6 @@ function AddClientModal({ onClose, onAdd }: any) {
             <input type="text" value={industry} onChange={e => setIndustry(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Real Estate, E-commerce" />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Initial Status</label>
-            <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none">
-              <option value="On Track">On Track 🟢</option>
-              <option value="Attention Needed">Attention Needed 🟡</option>
-              <option value="At Risk">At Risk 🔴</option>
-              <option value="Inactive">Inactive ⚪</option>
-            </select>
-          </div>
-
           <div className="pt-4 mt-4 border-t border-white/10 flex justify-end gap-3">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-slate-300 hover:bg-white/5 font-medium transition-colors">Cancel</button>
             <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors">Create Client</button>
@@ -405,7 +383,7 @@ function AddClientModal({ onClose, onAdd }: any) {
   )
 }
 
-function TasksView({ clients, tasks, toggleTask }: any) {
+function TasksView({ clients, tasks, toggleTask, onUpdateTask }: any) {
   const myTasks = tasks.filter((t: any) => t.status !== 'waiting_approval');
 
   const overdue = myTasks.filter((t: any) => t.status === 'overdue');
@@ -430,7 +408,7 @@ function TasksView({ clients, tasks, toggleTask }: any) {
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div> Overdue
             </h3>
             <div className="space-y-2">
-              {overdue.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />)}
+              {overdue.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           </section>
         )}
@@ -443,7 +421,7 @@ function TasksView({ clients, tasks, toggleTask }: any) {
             <p className="text-slate-500 italic px-2">No tasks pending for today. Great job!</p>
           ) : (
             <div className="space-y-2">
-              {today.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />)}
+              {today.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           )}
         </section>
@@ -452,7 +430,7 @@ function TasksView({ clients, tasks, toggleTask }: any) {
           <section className="space-y-3">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Upcoming</h3>
             <div className="space-y-2">
-              {upcoming.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />)}
+              {upcoming.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           </section>
         )}
@@ -461,7 +439,7 @@ function TasksView({ clients, tasks, toggleTask }: any) {
           <section className="space-y-3 opacity-60">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Completed</h3>
             <div className="space-y-2">
-              {completed.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />)}
+              {completed.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           </section>
         )}
@@ -566,86 +544,11 @@ function AddTaskModal({ clients, onClose, onAdd }: any) {
   )
 }
 
-function FollowupView({ clients, tasks, toggleTask }: any) {
-  const followUpTasks = tasks.filter((t: any) => t.category === 'Client Management' || t.title.toLowerCase().includes('follow up') || t.title.toLowerCase().includes('follow-up'));
-  
-  const todayFollowUps = followUpTasks.filter((t: any) => t.date === 'today' && t.status !== 'overdue');
-  const upcomingFollowUps = followUpTasks.filter((t: any) => t.date === 'upcoming');
-  const overdueFollowUps = followUpTasks.filter((t: any) => t.status === 'overdue');
-
-  return (
-    <div className="max-w-4xl mx-auto w-full p-6 lg:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="space-y-2 mb-8">
-        <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-          <MessageSquare className="text-blue-500" size={32} />
-          Follow-Up Center
-        </h2>
-        <p className="text-slate-400">Keep communication moving forward.</p>
-      </header>
-
-      {overdueFollowUps.length > 0 && (
-        <section className="space-y-4">
-          <h3 className="text-sm font-bold text-red-400 uppercase tracking-widest flex items-center gap-2">
-            <AlertTriangle size={16} /> Overdue Follow-Ups
-          </h3>
-          <div className="space-y-3">
-            {overdueFollowUps.map((t: any) => (
-              <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="space-y-4">
-        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Today</h3>
-        {todayFollowUps.length === 0 ? (
-          <p className="text-slate-500 italic">No follow-ups scheduled for today.</p>
-        ) : (
-          <div className="space-y-3">
-            {todayFollowUps.map((t: any) => (
-              <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {upcomingFollowUps.length > 0 && (
-        <section className="space-y-4 opacity-60">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Upcoming</h3>
-          <div className="space-y-3">
-            {upcomingFollowUps.map((t: any) => (
-              <GlobalTaskItem key={t.id} task={t} client={clients.find((c: any) => c.id === t.clientId)} onToggle={() => toggleTask(t.id)} />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
 function ClientMiniDash({ client, tasks }: { client: any, tasks: any[] }) {
   const todayTasks = tasks.filter(t => t.date === 'today' && t.status !== 'completed').length;
   const pendingTasks = tasks.filter(t => t.status === 'pending').length;
   const overdueTasks = tasks.filter(t => t.status === 'overdue').length;
   const waitingTasks = tasks.filter(t => t.status === 'waiting_approval').length;
-
-  const getStatusColor = (status: ClientStatus) => {
-    switch (status) {
-      case 'On Track': return 'text-green-400 bg-green-400/10 border-green-400/20';
-      case 'Attention Needed': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
-      case 'At Risk': return 'text-red-400 bg-red-400/10 border-red-400/20';
-      default: return 'text-slate-400 bg-slate-400/10 border-slate-400/20';
-    }
-  };
-
-  const getStatusIcon = (status: ClientStatus) => {
-    switch (status) {
-      case 'On Track': return <div className="w-2 h-2 rounded-full bg-green-500" />;
-      case 'Attention Needed': return <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />;
-      case 'At Risk': return <AlertTriangle size={14} className="text-red-500" />;
-      default: return <Circle size={14} />;
-    }
-  };
 
   return (
     <div className="glass-card rounded-2xl p-5 flex flex-col h-full border border-white/5 hover:border-white/10 transition-colors group cursor-pointer">
@@ -653,10 +556,6 @@ function ClientMiniDash({ client, tasks }: { client: any, tasks: any[] }) {
         <div>
           <h3 className="font-bold text-lg text-white group-hover:text-blue-400 transition-colors">{client.name}</h3>
           <p className="text-xs text-slate-500">{client.industry}</p>
-        </div>
-        <div className={`px-2.5 py-1 rounded-full border text-xs font-medium flex items-center gap-1.5 ${getStatusColor(client.status)}`}>
-          {getStatusIcon(client.status)}
-          {client.status}
         </div>
       </div>
 
@@ -687,59 +586,78 @@ function ClientMiniDash({ client, tasks }: { client: any, tasks: any[] }) {
   );
 }
 
-function ClientDetailCard({ client, tasks, onClick }: { client: any, tasks: any[], onClick?: () => void }) {
+function ClientDetailCard({ client, tasks, onClick, onDelete }: { client: any, tasks: any[], onClick?: () => void, onDelete?: (e: any) => void }) {
   const todayTasks = tasks.filter(t => t.date === 'today' && t.status !== 'completed').length;
   const pendingTasks = tasks.filter(t => t.status === 'pending').length;
   const overdueTasks = tasks.filter(t => t.status === 'overdue').length;
   const waitingTasks = tasks.filter(t => t.status === 'waiting_approval').length;
 
   return (
-    <div onClick={onClick} className="glass-panel rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all cursor-pointer group">
+    <div onClick={onClick} className="glass-panel rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all cursor-pointer group relative">
+      {onDelete && (
+        <button 
+          onClick={onDelete}
+          className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+          title="Delete Client"
+        >
+          <Trash2 size={16} />
+        </button>
+      )}
       <div className="flex flex-col md:flex-row gap-6">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">{client.name}</h3>
-            {client.status === 'On Track' && <span className="text-xs font-medium bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20">On Track</span>}
-            {client.status === 'Attention Needed' && <span className="text-xs font-medium bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/20">Attention Needed</span>}
-            {client.status === 'At Risk' && <span className="text-xs font-medium bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/20">At Risk</span>}
           </div>
           <p className="text-sm text-slate-400 mb-4">{client.industry}</p>
           
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-1.5"><Play size={14} className="text-blue-400"/> <span className="text-slate-300">Today: <strong className="text-white">{todayTasks}</strong></span></div>
             <div className="flex items-center gap-1.5"><FolderKanban size={14} className="text-slate-400"/> <span className="text-slate-300">Pending: <strong className="text-white">{pendingTasks}</strong></span></div>
-            <div className="flex items-center gap-1.5"><AlertCircle size={14} className={overdueTasks > 0 ? "text-red-400" : "text-slate-400"}/> <span className="text-slate-300">Overdue: <strong className={overdueTasks > 0 ? "text-red-400" : "text-white"}>{overdueTasks}</strong></span></div>
-            <div className="flex items-center gap-1.5"><Clock size={14} className={waitingTasks > 0 ? "text-yellow-400" : "text-slate-400"}/> <span className="text-slate-300">Waiting: <strong className={waitingTasks > 0 ? "text-yellow-400" : "text-white"}>{waitingTasks}</strong></span></div>
           </div>
-        </div>
-        
-        <div className="w-full md:w-72 bg-slate-800/40 rounded-xl p-4 border border-white/5 flex flex-col justify-center relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-5 text-white"><LayoutDashboard size={100} /></div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Next Action</p>
-          <p className="font-medium text-slate-200">{client.nextAction}</p>
-          <p className="text-xs text-slate-500 mt-3 flex items-center gap-1"><Clock size={12}/> Last activity: {client.lastContact}</p>
         </div>
       </div>
     </div>
   )
 }
 
-function GlobalTaskItem({ task, client, onToggle }: { task: any, client: any, onToggle: () => void }) {
+function GlobalTaskItem({ task, client, onToggle, onUpdate }: { task: any, client: any, onToggle: () => void, onUpdate?: (id: number, data: any) => void }) {
   const isCompleted = task.status === 'completed';
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+
+  const handleSave = (e: any) => {
+    e.stopPropagation();
+    if (editTitle.trim() && editTitle !== task.title && onUpdate) {
+      onUpdate(task.id, { title: editTitle.trim() });
+    }
+    setIsEditing(false);
+  };
 
   return (
     <div 
-      className={`glass-card rounded-xl p-4 flex items-center gap-4 cursor-pointer group hover:bg-white/5 transition-all border ${isCompleted ? 'border-white/5 opacity-50 bg-white/5' : 'border-white/5'}`} 
-      onClick={onToggle}
+      className={`glass-card rounded-xl p-4 flex items-center gap-4 group hover:bg-white/5 transition-all border ${isCompleted ? 'border-white/5 opacity-50 bg-white/5' : 'border-white/5'}`} 
     >
-      <button className={`flex-shrink-0 transition-colors focus:outline-none ${isCompleted ? 'text-blue-500' : 'text-slate-400 hover:text-blue-400'}`}>
+      <button onClick={(e) => { e.stopPropagation(); onToggle(); }} className={`flex-shrink-0 transition-colors focus:outline-none ${isCompleted ? 'text-blue-500' : 'text-slate-400 hover:text-blue-400'}`}>
         {isCompleted ? <CheckCircle2 size={22} /> : <Circle size={22} className="group-hover:text-blue-400" />}
       </button>
 
-      <div className="flex-1 min-w-0">
-        <h4 className={`text-base font-medium truncate transition-colors ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-200 group-hover:text-white'}`}>
-          {task.title}
-        </h4>
+      <div className="flex-1 min-w-0" onClick={(e) => { if (!isEditing) onToggle(); }}>
+        {isEditing ? (
+          <input 
+            type="text" 
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSave(e); else if (e.key === 'Escape') { setIsEditing(false); setEditTitle(task.title); } }}
+            className="w-full bg-slate-800 border border-white/10 rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <h4 className={`text-base font-medium truncate transition-colors ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-200 group-hover:text-white'}`}>
+            {task.title}
+          </h4>
+        )}
         <div className="flex items-center gap-3 mt-1.5">
           <span className={`text-xs font-medium px-2 py-0.5 rounded-md border ${isCompleted ? 'text-slate-500 bg-slate-800 border-slate-700' : 'text-blue-400 bg-blue-400/10 border-blue-400/20'}`}>
             {client?.name}
@@ -751,6 +669,12 @@ function GlobalTaskItem({ task, client, onToggle }: { task: any, client: any, on
           )}
         </div>
       </div>
+      
+      {onUpdate && !isEditing && (
+        <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white transition-opacity p-2 focus:outline-none">
+          <Edit2 size={16} />
+        </button>
+      )}
     </div>
   );
 }
@@ -799,8 +723,19 @@ function MobileNavItem({ icon, label, active = false, onClick }: any) {
   );
 }
 
-function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
+function ClientDetailView({ client, tasks, toggleTask, onBack, onUpdateClient, onDeleteClient, onUpdateTask }: any) {
   if (!client) return null;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(client.name);
+  const [editIndustry, setEditIndustry] = useState(client.industry);
+
+  const handleSave = () => {
+    if (editName.trim() && (editName !== client.name || editIndustry !== client.industry)) {
+      onUpdateClient({ name: editName.trim(), industry: editIndustry.trim() });
+    }
+    setIsEditing(false);
+  };
 
   const myTasks = tasks.filter((t: any) => t.status !== 'waiting_approval');
   const waitingTasks = tasks.filter((t: any) => t.status === 'waiting_approval');
@@ -817,9 +752,27 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
       </button>
 
       <header className="space-y-4 mb-8 border-b border-white/10 pb-6">
-        <div>
-          <h2 className="text-3xl font-bold text-white mb-1">{client.name}</h2>
-          <p className="text-slate-400">{client.industry}</p>
+        <div className="flex justify-between items-start">
+          {isEditing ? (
+            <div className="flex-1 max-w-sm space-y-2">
+              <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded px-2 py-1 text-white font-bold text-xl focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <input type="text" value={editIndustry} onChange={e => setEditIndustry(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded px-2 py-1 text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <div className="flex gap-2 mt-2">
+                <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded transition-colors">Save</button>
+                <button onClick={() => { setIsEditing(false); setEditName(client.name); setEditIndustry(client.industry); }} className="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded transition-colors">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-1">{client.name}</h2>
+              <p className="text-slate-400">{client.industry}</p>
+            </div>
+          )}
+          
+          <div className="flex gap-2">
+            {!isEditing && <button onClick={() => setIsEditing(true)} className="p-2 glass-panel rounded hover:bg-white/5 text-slate-400 hover:text-white transition-colors focus:outline-none"><Edit2 size={18} /></button>}
+            <button onClick={onDeleteClient} className="p-2 glass-panel rounded hover:bg-red-500/20 text-red-400 transition-colors focus:outline-none"><Trash2 size={18} /></button>
+          </div>
         </div>
       </header>
 
@@ -831,7 +784,7 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div> Overdue
             </h3>
             <div className="space-y-2">
-              {overdue.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} />)}
+              {overdue.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           </section>
         )}
@@ -844,7 +797,7 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
             <p className="text-slate-500 italic px-2">No tasks pending for today.</p>
           ) : (
             <div className="space-y-2">
-              {today.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} />)}
+              {today.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           )}
         </section>
@@ -853,7 +806,7 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
           <section className="space-y-3">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Upcoming</h3>
             <div className="space-y-2">
-              {upcoming.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} />)}
+              {upcoming.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           </section>
         )}
@@ -864,7 +817,7 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
               <Clock size={14} /> Waiting On Client
             </h3>
             <div className="space-y-2">
-              {waitingTasks.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} />)}
+              {waitingTasks.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           </section>
         )}
@@ -873,7 +826,7 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
           <section className="space-y-3 opacity-60">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Completed</h3>
             <div className="space-y-2">
-              {completed.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} />)}
+              {completed.map((t: any) => <GlobalTaskItem key={t.id} task={t} client={client} onToggle={() => toggleTask(t.id)} onUpdate={onUpdateTask} />)}
             </div>
           </section>
         )}
@@ -883,17 +836,7 @@ function ClientDetailView({ client, tasks, toggleTask, onBack }: any) {
   );
 }
 
-function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode, setIsDarkMode, onReset, appPassword, setAppPassword }: any) {
-  const [newPassword, setNewPassword] = useState(appPassword);
-
-  const handleUpdatePassword = () => {
-    if (newPassword) {
-      setAppPassword(newPassword);
-      localStorage.setItem('appPassword', newPassword);
-      alert('Password updated successfully');
-    }
-  };
-
+function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode, setIsDarkMode, onReset }: any) {
   return (
     <div className="max-w-4xl mx-auto w-full p-6 lg:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="space-y-2 mb-8 border-b border-white/10 pb-6">
@@ -933,17 +876,6 @@ function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode
         </section>
 
         <section className="glass-panel rounded-2xl p-6 border border-white/10">
-          <h3 className="text-lg font-bold text-white mb-4">Security</h3>
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">App Password</label>
-            <div className="flex gap-2 w-full md:w-96">
-              <input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
-              <button onClick={handleUpdatePassword} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">Update</button>
-            </div>
-          </div>
-        </section>
-
-        <section className="glass-panel rounded-2xl p-6 border border-white/10">
           <h3 className="text-lg font-bold text-red-400 mb-4">Danger Zone</h3>
           <button onClick={onReset} className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-2 rounded-lg font-medium hover:bg-red-500/20 transition-colors">
             Reset Workspace Data
@@ -953,3 +885,5 @@ function SettingsView({ userName, setUserName, userRole, setUserRole, isDarkMode
     </div>
   );
 }
+
+
