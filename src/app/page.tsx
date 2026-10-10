@@ -209,11 +209,8 @@ function DashboardView({ clients, tasks, toggleTask, userName, onUpdateTask }: a
       {/* Daily Client Check Summary */}
       <section>
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Client Daily Check</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard title="Active Clients" value={activeClientsCount} icon={<Users className="text-blue-400" size={20} />} />
-          <StatCard title="On Track" value={onTrackCount} icon={<div className="w-3 h-3 rounded-full bg-green-500" />} />
-          <StatCard title="Need Attention" value={attentionCount} icon={<div className="w-3 h-3 rounded-full bg-yellow-500" />} />
-          <StatCard title="At Risk" value={riskCount} icon={<div className="w-3 h-3 rounded-full bg-red-500" />} highlight />
         </div>
       </section>
 
